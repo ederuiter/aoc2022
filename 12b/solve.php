@@ -34,14 +34,14 @@ class PriorityQueue
     }
 }
 
-function neighbours($grid, $y, $x): array
+function stepBack($grid, $y, $x): array
 {
     static $steps = [[0, -1], [0, 1], [-1, 0], [1, 0]];
     $res = [];
     foreach ($steps as [$stepY, $stepX]) {
         $newY = $y + $stepY;
         $newX = $x + $stepX;
-        if (isset($grid[$newY][$newX]) && (ord($grid[$newY][$newX]) - ord($grid[$y][$x])) < 2) {
+        if (isset($grid[$newY][$newX]) && (ord($grid[$y][$x]) - ord($grid[$newY][$newX])) < 2) {
             $res[] = [$newY, $newX];
         }
     }
@@ -51,10 +51,9 @@ function neighbours($grid, $y, $x): array
     return $res;
 }
 
-function shortestPath($grid, $start, $end): array
+function distances($grid, $start): array
 {
     [$startY, $startX] = $start;
-    [$endY, $endX] = $end;
 
     $dist = [];
     $prev = [];
@@ -71,17 +70,7 @@ function shortestPath($grid, $start, $end): array
     }
 
     while ([$uy, $ux] = $q->shift()) {
-        if ($uy === $endY && $ux === $endX) {
-            $path = [];
-            $current = $end;
-            while ($current) {
-                array_unshift($path, $current);
-                $current = $prev[$current[0]][$current[1]];
-            }
-            return $path;
-        }
-
-        foreach (neighbours($grid, $uy, $ux) as [$vy, $vx]) {
+        foreach (stepBack($grid, $uy, $ux) as [$vy, $vx]) {
             $alt = $dist[$uy][$ux] + 1;
             //echo "[$vy, $vx] {$dist[$vy][$vx]} => $alt\n";
             if ($alt < $dist[$vy][$vx]) {
@@ -92,10 +81,7 @@ function shortestPath($grid, $start, $end): array
         }
     }
 
-//    print_r($dist);
-//    print_r($prev);
-
-    return [];
+    return [$dist, $prev];
 }
 
 $possibleStarts = [];
@@ -121,16 +107,17 @@ foreach ($lines as $y => $line) {
 }
 
 $minSteps = PHP_INT_MAX;
-$minStart = [-1, -1];
-foreach ($possibleStarts as $start) {
-    $path = shortestPath($grid, $start, $end);
-    if ($path) {
-        $steps = count($path) -1;
+$minStart = [-1,-1];
+[$dist, $prev] = distances($grid, $end);
+foreach ($possibleStarts as [$startY, $startX]) {
+    if ($prev[$startY][$startX]) {
+        $steps = $dist[$startY][$startX];
+        echo "possible start at [$startY, $startX] => $steps\n";
         if ($steps < $minSteps) {
             $minSteps = $steps;
-            $minStart = $start;
+            $minStart = [$startY, $startX];
         }
-        echo json_encode($start), " => $steps\n";
     }
 }
-echo "best to start at ", json_encode($minStart), " this requires $minSteps steps\n";
+
+echo "from the ", count($possibleStarts) . " possible starting points it is best to start at ", json_encode($minStart), " this requires $minSteps steps\n";
